@@ -17,13 +17,21 @@ CMD*/
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple Web app example</title>
 
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/css-spinning-spinners/1.1.0/load3.css" />
+
     <style>
+      body {
+        background-color: #212529 !important;
+      }
+
       .container {
         background-color: #212529;
         color: white;
         margin: 0;
         padding: 0;
+        min-height: 100%;
       }
+
       .coin-container {
         display: flex;
         justify-content: center;
@@ -134,6 +142,10 @@ CMD*/
         background-color: #1e2228;
         padding: 10px;
         border-radius: 10px;
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        z-index: 1000; /* Обеспечивает, что блок будет поверх других элементов */
       }
 
       .nav-button {
@@ -165,7 +177,6 @@ CMD*/
         padding: 10px;
         background-color: #1e2228;
         border-radius: 10px;
-        margin-top: 20px;
       }
 
       .icon-coin {
@@ -227,124 +238,198 @@ CMD*/
         font-size: 14px;
       }
 
+      .hidden-block {
+        display: none;
+      }
 
     </style>
 
   </head>
   <body>
-
     <div class="container" id="app">
 
-      <div class="user-info d-flex justify-content-between align-items-center">
-        <span class="text-primary">{{ user.username || user.telegramid }}</span>
-        <span class="text-light icon-coin"> {{ user.balance }}</span>
-      </div>
+      <div class="loading" v-if="!isStarted"></div>
 
-      <div class="d-flex justify-content-center pt-2">
-        <div class="game-button">
-          <div>Earn per tap</div>
-          <span>+1</span>
-        </div>
-        <div class="game-button">
-          <div>Coins to level up</div>
-          <span>5K</span>
-        </div>
-        <div class="game-button">
-          <div>Profit per hour</div>
-          <span>0</span>
-        </div>
-      </div>
-
-      <div v-if="activePage === 'Work'">
-        <div class="coin-container mt-4">
-          <img src="https://cdn-icons-png.flaticon.com/512/9382/9382189.png" alt="Coin">
-          <span class="coin-text">{{ user.balance }}</span>
+      <div class="pages hidden-block">
+        <div class="user-info d-flex justify-content-between align-items-center">
+          <span class="text-secondary">{{ user.username || user.telegramid }}</span>
+          <span class="text-light icon-coin"> {{ user.balance }}</span>
         </div>
 
-        <h5 class="d-flex justify-content-between">
-          <span>Bronze ></span>
-          <span>Level 1/9</span>
-        </h5>
-        <div class="progress">
-          <div class="progress-bar" role="progressbar" style="width: 20%;" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100"></div>
-        </div>
-
-        <div class="m-5 work-button">
-          <div class="gradient-border">
-            <video width="256" height="256" preload="none"
-              style="background: transparent url('https://cdn-icons-png.flaticon.com/512/11926/11926848.png') 50% 50% / fit no-repeat;"
-              autoplay="autoplay" loop="true" muted="muted" playsinline="">
-              <source src="https://cdn-icons-mp4.flaticon.com/512/11926/11926848.mp4" type="video/mp4">
-            </video>
+        <div class="d-flex justify-content-center pt-2" v-if="activePage === 'Work' || activePage === 'Mine'">
+          <div class="game-button">
+            <div>Earn per tap</div>
+            <span>+1</span>
+          </div>
+          <div class="game-button">
+            <div>Coins to level up</div>
+            <span>5K</span>
+          </div>
+          <div class="game-button">
+            <div>Profit per hour</div>
+            <span>0</span>
           </div>
         </div>
-      </div>
 
-      <div v-if="activePage === 'Mine'">
-        <div class="coin-container mt-4">
-          <img src="https://cdn-icons-png.flaticon.com/512/9382/9382189.png" alt="Coin">
-          <span class="coin-text">{{ user.balance }}</span>
+        <!-- page: Work -->
+        <div v-if="activePage === 'Work'">
+          <div class="coin-container mt-4">
+            <img src="https://cdn-icons-png.flaticon.com/512/9382/9382189.png" alt="Coin">
+            <span class="coin-text">{{ user.balance }}</span>
+          </div>
+
+          <h5 class="d-flex justify-content-between">
+            <span>Bronze ></span>
+            <span>Level {{user.level}}/9</span>
+          </h5>
+          <div class="progress">
+            <div class="progress-bar" role="progressbar" style="width: 20%;" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+
+          <div class="m-5 work-button text-center">
+            <div class="gradient-border">
+              <video @click="tap()" width="200" height="200" preload="true"
+                ref="video"
+                style="background: transparent url('https://cdn-icons-png.flaticon.com/512/11926/11926848.png') 50% 50% / fit no-repeat;"
+                muted="muted" playsinline="">
+                <source src="https://cdn-icons-mp4.flaticon.com/512/11926/11926848.mp4" type="video/mp4">
+              </video>
+            </div>
+          </div>
+
+          <p><i class="bi bi-lightning-fill text-warning"></i>{{ user.energy }} / {{ user.maxEnergy }}</p>
         </div>
 
-        <div class="nav-bar">
-          <button  @click="setMineSubPage('Mine')" :class="['nav-item', { active: mineSubPageName === 'Mine' }]" >Mine</button>
-          <button  @click="setMineSubPage('Markets')" :class="['nav-item', { active: mineSubPageName === 'Markets' }]" >Markets</button>
+        <!-- page: Mine -->
+        <div v-if="activePage === 'Mine'">
+          <div class="coin-container mt-4">
+            <img src="https://cdn-icons-png.flaticon.com/512/9382/9382189.png" alt="Coin">
+            <span class="coin-text">{{ user.balance }}</span>
+          </div>
+
+          <div class="nav-bar">
+            <button  @click="setMineSubPage('Mine')" :class="['nav-item', { active: mineSubPageName === 'Mine' }]" >Mine</button>
+            <button  @click="setMineSubPage('Markets')" :class="['nav-item', { active: mineSubPageName === 'Markets' }]" >Markets</button>
+          </div>
+
+          <div v-if="mineSubPageName === 'Mine'">
+            <div class="event-card">
+              <div class="event-header">
+                <img src="https://cdn-icons-png.flaticon.com/512/11926/11926834.png" alt="Upgrade mine" class="event-icon">
+                <div class="event-details">
+                  <h3>Upgrade mine</h3>
+                  <p>Hour income</p>
+                  <span class="event-profit icon-coin">100</span>
+                </div>
+              </div>
+              <div class="level-info">
+                <div class="level">lvl 0</div>
+                <div class="total-profit icon-coin">0</div>
+              </div>
+            </div>
+
+            <div class="event-card">
+              <div class="event-header">
+                <img src="https://cdn-icons-png.flaticon.com/512/11926/11926820.png" alt="Add track" class="event-icon">
+                <div class="event-details">
+                  <h3>Add truck</h3>
+                  <p>Hour income</p>
+                  <span class="event-profit icon-coin">100</span>
+                </div>
+              </div>
+              <div class="level-info">
+                <div class="level">lvl 0</div>
+                <div class="total-profit icon-coin">0</div>
+              </div>
+            </div>
+
+          </div>
+
+          <div v-if="mineSubPageName === 'Markets'">
+            <div class="event-card">
+              <div class="event-header">
+                <img src="https://cdn-icons-png.flaticon.com/512/11926/11926899.png" alt="Apple" class="event-icon">
+                <div class="event-details">
+                  <h3>Apple for connection</h3>
+                  <p>Hour income</p>
+                  <span class="event-profit icon-coin">100</span>
+                </div>
+              </div>
+              <div class="level-info">
+                <div class="level">lvl 0</div>
+                <div class="total-profit icon-coin">0</div>
+              </div>
+            </div>
+          </div>
+
         </div>
 
-        <div v-if="mineSubPageName === 'Mine'">
+        <!-- page: Friends -->
+        <div v-if="activePage === 'Friends'">
+          <div class="text-center">
+            <h1>Invite friends!</h1>
+            <p>You and your friend will have bonuses</p>
+          </div>
+
           <div class="event-card">
             <div class="event-header">
-              <img src="https://cdn-icons-png.flaticon.com/512/11926/11926834.png" alt="Upgrade mine" class="event-icon">
+              <img src="https://cdn-icons-png.flaticon.com/512/9382/9382189.png" alt="Reward" class="event-icon">
               <div class="event-details">
-                <h3>Upgrade mine</h3>
-                <p>Hour income</p>
+                <h3>Invite friend</h3>
+                <span class="event-profit icon-coin">+5 000</span> for you and your friend
+              </div>
+            </div>
+          </div>
+
+          <p class="mt-5">Your friends list (0)</p>
+          <div class="event-card">
+            <div class="event-header">
+              <img src="https://cdn-icons-png.flaticon.com/512/9382/9382189.png" alt="Reward" class="event-icon">
+              <div class="event-details">
+                <h3>Nickname</h3>
+                <span class="event-profit icon-coin">+5 000</span>
+              </div>
+            </div>
+          </div>
+
+
+
+        </div>
+
+        <!-- page: Earn -->
+        <div v-if="activePage === 'Earn'">
+          <div class="coin-container mt-4">
+            <img src="https://cdn-icons-png.flaticon.com/512/9382/9382189.png" alt="Coin">
+          </div>
+          <div>
+            <h1 class="text-center mb-3">Earn more!</h1>
+          </div>
+
+          <h3>Daily tasks</h3>
+          <div class="event-card">
+            <div class="event-header">
+              <img src="https://cdn-icons-png.flaticon.com/512/9382/9382189.png" alt="Reward" class="event-icon">
+              <div class="event-details">
+                <h3>Daily reward</h3>
                 <span class="event-profit icon-coin">100</span>
               </div>
             </div>
-            <div class="level-info">
-              <div class="level">lvl 0</div>
-              <div class="total-profit icon-coin">0</div>
-            </div>
           </div>
 
+          <h3 class="mt-5">Tasks list</h3>
           <div class="event-card">
             <div class="event-header">
-              <img src="https://cdn-icons-png.flaticon.com/512/11926/11926820.png" alt="Add track" class="event-icon">
+              <img src="https://cdn1.iconfinder.com/data/icons/unicons-line-vol-6/24/telegram-alt-128.png" alt="Join" class="event-icon">
               <div class="event-details">
-                <h3>Add truck</h3>
-                <p>Hour income</p>
+                <h3>Join to <a href="https://t.me/chatbotsbusiness">BB chat</a></h3>
                 <span class="event-profit icon-coin">100</span>
               </div>
             </div>
-            <div class="level-info">
-              <div class="level">lvl 0</div>
-              <div class="total-profit icon-coin">0</div>
-            </div>
-          </div>
-
-        </div>
-
-        <div v-if="mineSubPageName === 'Markets'">
-          <div class="event-card">
-            <div class="event-header">
-              <img src="https://cdn-icons-png.flaticon.com/512/11926/11926899.png" alt="Apple" class="event-icon">
-              <div class="event-details">
-                <h3>Apple for connection</h3>
-                <p>Hour income</p>
-                <span class="event-profit icon-coin">100</span>
-              </div>
-            </div>
-            <div class="level-info">
-              <div class="level">lvl 0</div>
-              <div class="total-profit icon-coin">0</div>
-            </div>
           </div>
         </div>
-
-
       </div>
 
-      <div class="bottom-nav">
+      <div class="bottom-nav hidden-block">
         <button v-for="(item, index) in navItems"
                 :key="index"
                 @click="setActivePage(item.name)"
@@ -359,7 +444,7 @@ CMD*/
 
 
 
-    <div class="container" id="app">
+    <!-- <div class="container" id="app">
       <div class="row m-3">
           <div class="col-6">
             <button id="increment" @click="addBalance(1)" class="btn btn-primary w-100">Balance: +1</button>
@@ -370,25 +455,27 @@ CMD*/
             <button id="save" class="btn btn-success w-100" @click="saveBalance()">Save</button>
           </div>
       </div>
-    </div>
+    </div> -->
 
     <!-- VueJS script -->
     <script src="https://cdn.jsdelivr.net/npm/vue@3.4.38/dist/vue.global.min.js"></script>
 
     <!-- Bootstrap -->
-    <script src=" https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js "></script>
-    <link href=" https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css " rel="stylesheet">
-
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 
     <script>
       // simple VueJS app to demonstrate data binding
       const app = Vue.createApp({
         data() {
           return {
+            isStarted: false,
             // pass balance from options
             user: {},
+            ApiUrls: {},
             // extract url from url path. It is personal url for user
-            syncUserDataUrl: new URL(window.location.href).searchParams.get("syncUserDataUrl"),
+            loadUrl: new URL(window.location.href).searchParams.get("loadUrl"),
             // current active page
             activePage: 'Work',
             mineSubPageName: 'Mine',
@@ -410,13 +497,31 @@ CMD*/
           addBalance(amount) {
             this.user.balance += amount;
           },
+          animateTapButton(){
+            const video = this.$refs.video;
+            video.play();
+            video.addEventListener('ended', () => {
+              video.currentTime = 0;
+              video.pause();
+            }, { once: true });
+          },
+          tap(){
+            this.animateTapButton();
+            this.addBalance(this.user.level);
+          },
           loadBalance() {
             // get balance from server
             // see: bot command syncBalance
-            fetch(this.syncUserDataUrl)
+            fetch(this.loadUrl)
               .then(response => response.json())
               .then(data => {
+                console.log(data); // just for debug
                 this.user = data.user;
+                // API urls
+                this.ApiUrls = data.urls;
+                this.isStarted = true;
+                // remove 'hidden-block' class from all elements with this class
+                document.querySelectorAll('.hidden-block').forEach(el => el.classList.remove('hidden-block'));
               });
           },
           saveBalance() {
