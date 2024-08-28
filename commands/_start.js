@@ -11,8 +11,8 @@
 CMD*/
 
 // we need personal user url for data sync beetwen WebApp and bot
-let syncUserDataUrl = Libs.Webhooks.getUrlFor({
-  command: "syncUserData",
+let loadUrl = Libs.Webhooks.getUrlFor({
+  command: "loadData",
   // it is personal for user
   user_id: user.id
 })
@@ -20,12 +20,12 @@ let syncUserDataUrl = Libs.Webhooks.getUrlFor({
 let url = WebApp.getUrl({
   command: "renderWebApp",
   options: {
-    syncUserDataUrl: syncUserDataUrl
+    loadUrl: loadUrl
   }
 });
 
 let welcomeText;
-// It is have personal data: syncUserDataUrl
+// It is have personal data: loadUrl
 welcomeText = "Hello. It is demo Tap Game Bot. \n\nYou can play now!",
 // it is for debug. Try to don't show url for user.
 // welcomeText = `Hello. It is demo Tap Game Bot. \n\nYou can [play now](${url})!`,
