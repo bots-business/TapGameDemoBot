@@ -98,15 +98,15 @@ class GameUser {
 
   upgradeBuilding(building_title) {
     let curBuilding = this.upgradesList[building_title] || { level: 0 };
-    const needMoney = new Buildings().costFor(building_title, curBuilding.level + 1);
-    if(!needMoney) {
+    const neededMoney = new Buildings().costFor(building_title, curBuilding.level + 1);
+    if(!neededMoney) {
       return { error: "No such building" };
     }
-    if(this.balance + this._balance_slip() < needMoney) {
+    if(this.balance + this._balance_slip() < neededMoney) {
       return { error: "Not enough money" };
     }
     // update balance
-    this._setBalance(this.balance - needMoney);
+    this._setBalance(this.balance - neededMoney);
     // update building level
     curBuilding.level++;
     this.upgradesList[building_title] = curBuilding;
