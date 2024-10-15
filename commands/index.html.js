@@ -15,7 +15,7 @@ CMD*/
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Web app example</title>
+    <title>Simple Web App Tap Game example</title>
 
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/css-spinning-spinners/1.1.0/load3.css" />
 
@@ -266,11 +266,13 @@ CMD*/
       <div class="pages hidden-block">
         <div class="user-info d-flex justify-content-between align-items-center">
           <span class="text-secondary">{{ user.username || user.telegramid }}</span>
-          <span class="text-light icon-coin mr-5"> {{ user.balance }}</span>
+          <span class="top-balance text-light icon-coin mr-5"> {{ user.balance }}</span>
         </div>
 
         <!-- alert -->
-        <div class="alert alert-temporary alert-secondary d-flex align-items-center" role="alert" v-if="topAlert.enabled">
+        <div class="alert alert-temporary d-flex align-items-center"
+            role="alert" v-if="topAlert.enabled"
+            :class="`alert-${topAlert.class || 'secondary'}`">
           <div class="flex-grow-1">
             {{ topAlert.text }}
           </div>
@@ -317,7 +319,7 @@ CMD*/
             </div>
           </div>
 
-          <p><i class="bi bi-lightning-fill text-warning"></i>{{ user.energy }} / {{ user.maxEnergy }}</p>
+          <p class="energy"><i class="bi bi-lightning-fill text-warning"></i>{{ user.energy }} / {{ user.maxEnergy }}</p>
         </div>
 
         <!-- page: Mine -->
@@ -385,8 +387,6 @@ CMD*/
               </div>
             </div>
           </div>
-
-
 
         </div>
 
@@ -476,6 +476,10 @@ CMD*/
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+    <!-- Mocha for testing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mocha/10.7.3/mocha.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mocha/10.7.3/mocha.min.css">
 
     <script>
       // Simple ResLib for frontend
@@ -883,15 +887,19 @@ CMD*/
             console.log('Upgrade building', building);
             this._makePostRequest('upgradeBuilding', { title: building.title }, (data) => {
               console.log('Upgrade response:', data);
+              this.user.balance = data.balance;
+              this.hideModal();
               this.showAlert({ text: "Ugraded", liveTime: 2500 });
-              // this.user.balance = data.balance;
             });
           },
           showModal(params){
             this.topModal = params;
             new bootstrap.Modal(document.getElementById('TopModal'), {
-              backdrop: 'static'
+              backdrop: true
             }).show();
+          },
+          hideModal(){
+            document.querySelector('#TopModal .btn-close').click();
           },
           showAlert(params){
             this.topAlert = params;
@@ -944,7 +952,7 @@ CMD*/
             .then((data) => {
               console.log('Command posted:', command + '. Response:', data);
               if(data.error){
-                this.showAlert({ text: data.error, liveTime: 2500 });
+                this.showAlert({ text: data.error, class: "danger", liveTime: 2500 });
                 return;
               }
               if(callback){ callback(data) }
@@ -958,6 +966,58 @@ CMD*/
       });
 
       app.mount('#app');
+    </script>
+
+    <!-- Mocha Testing -->
+    <style>
+      #mocha {
+        margin: 0;
+      }
+      .modal-body ul#mocha-stats {
+        position: relative;
+        font-size: 12px;
+      }
+      .modal-body ul#mocha-stats .progress-text{
+        font-size: 12px;
+      }
+    </style>
+    <div class="modal fade" id="mochaModal" tabindex="-1" role="dialog" aria-labelledby="mochaModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="mochaModalLabel">Auto Test</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div id="startTestNotify">
+              <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                You can need to run <b>/reset</b> command in bot before tests
+              </div>
+              <h1>You can run tests now</h1>
+              You can disable this message in /start command
+            </div>
+            <div id="mocha"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" id="runTestsButton">Run Tests</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // add test script from URL
+      const queryParams = new URLSearchParams(window.location.search);
+      const testScriptUrl = queryParams.get('testScriptUrl');
+      if (testScriptUrl) {
+        const script = document.createElement('script');
+        script.src = testScriptUrl;
+        script.onerror = function() {
+          console.error(`Failed to load Test script from ${testScriptUrl}`);
+        };
+        document.head.appendChild(script);
+      }
     </script>
 
   </body>
