@@ -11,7 +11,6 @@
 CMD*/
 
 // reset Game data
-
 let gameUser = new GameUser(user);
 gameUser.reset();
 

@@ -79,7 +79,7 @@ class GameUser {
   // save new balance to user and energy
   trackTapWork(params) {
     if (params.energy > this.energy) {
-      return { error: "Not enough energy. You have only: " + this.energy };
+      return { error: "Not enough energy. You have only: " + this.energy?.toFixed(0) };
     }
     if (params.balance <= 0) {
       return { error: "Balance can't be negative" };
@@ -98,21 +98,22 @@ class GameUser {
 
   upgradeBuilding(building_title) {
     let curBuilding = this.upgradesList[building_title] || { level: 0 };
-    const needMoney = new Buildings().costFor(building_title, curBuilding.level + 1);
-    if(!needMoney) {
+    const neededMoney = new Buildings().costFor(building_title, curBuilding.level + 1);
+    if(!neededMoney) {
       return { error: "No such building" };
     }
-    if(this.balance + this._balance_slip() < needMoney) {
-      return { error: "Not enough money" };
+    if(this.balance + this._balance_slip() < neededMoney) {
+      return { error: "Not enough money. Needs: " + neededMoney?.toFixed(0) +
+        " but you have: " + this.balance?.toFixed(0) };
     }
     // update balance
-    this._setBalance(this.balance - needMoney);
+    this._setBalance(this.balance - neededMoney);
     // update building level
     curBuilding.level++;
     this.upgradesList[building_title] = curBuilding;
     this._saveGeneralData();
     this._recalceUpgradesGrowths();
-    return { success: true };
+    return { success: true, user: this.toJSON() };
   }
 
   // delete all user data
@@ -191,12 +192,14 @@ class GameUser {
   }
 
   _recalceUpgradesGrowths() {
-    this.balanceRes.resetGrowth();
-    this.upgradesList.forEach((building, title) => {
+    const balanceRes = Libs.ResourcesLib.userRes("balance");
+    balanceRes.resetGrowth();
+
+    Object.entries(this.upgradesList).forEach(([building, title]) => {
       const buildingData = new Buildings().getByTitle(title);
       if (buildingData){
         const growth = buildingData[`l${building.level}`].income;
-        this.balanceRes.growth.add({ value: growth, interval: 60, max: null });
+        balanceRes.growth.add({ value: growth, interval: 60, max: null });
       }
     })
   }
