@@ -15,7 +15,7 @@ CMD*/
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Web app example</title>
+    <title>Simple Web App Tap Game example</title>
 
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/css-spinning-spinners/1.1.0/load3.css" />
 
@@ -266,11 +266,13 @@ CMD*/
       <div class="pages hidden-block">
         <div class="user-info d-flex justify-content-between align-items-center">
           <span class="text-secondary">{{ user.username || user.telegramid }}</span>
-          <span class="text-light icon-coin mr-5"> {{ user.balance }}</span>
+          <span class="top-balance text-light icon-coin mr-5"> {{ user.balance }}</span>
         </div>
 
         <!-- alert -->
-        <div class="alert alert-temporary alert-secondary d-flex align-items-center" role="alert" v-if="topAlert.enabled">
+        <div class="alert alert-temporary d-flex align-items-center"
+            role="alert" v-if="topAlert.enabled"
+            :class="`alert-${topAlert.class || 'secondary'}`">
           <div class="flex-grow-1">
             {{ topAlert.text }}
           </div>
@@ -317,7 +319,7 @@ CMD*/
             </div>
           </div>
 
-          <p><i class="bi bi-lightning-fill text-warning"></i>{{ user.energy }} / {{ user.maxEnergy }}</p>
+          <p class="energy"><i class="bi bi-lightning-fill text-warning"></i>{{ user.energy }} / {{ user.maxEnergy }}</p>
         </div>
 
         <!-- page: Mine -->
@@ -385,8 +387,6 @@ CMD*/
               </div>
             </div>
           </div>
-
-
 
         </div>
 
@@ -476,6 +476,10 @@ CMD*/
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+    <!-- Mocha for testing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mocha/10.7.3/mocha.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mocha/10.7.3/mocha.min.css">
 
     <script>
       // Simple ResLib for frontend
@@ -780,6 +784,11 @@ CMD*/
 
 
     <script>
+      function log(data, field){
+        // can be turned of in production
+        console.log(data, field);
+      }
+
       // VueJS app for Tap game
       const app = Vue.createApp({
         data() {
@@ -877,21 +886,27 @@ CMD*/
               button_enabled: this.user.balance >= this.buildingCost(building, true),
               onClick: () => this.upgradeBuilding(building),
             })
-            console.log(this.topModal);
+            log(this.topModal);
           },
           upgradeBuilding(building) {
-            console.log('Upgrade building', building);
+            log('Upgrade building', building);
             this._makePostRequest('upgradeBuilding', { title: building.title }, (data) => {
-              console.log('Upgrade response:', data);
+              log('Upgrade response:', data);
+              // TODO: error here
+              console.warn('TODO: error here');
+              this.user = data.user; // needs balance here
+              this.hideModal();
               this.showAlert({ text: "Ugraded", liveTime: 2500 });
-              // this.user.balance = data.balance;
             });
           },
           showModal(params){
             this.topModal = params;
             new bootstrap.Modal(document.getElementById('TopModal'), {
-              backdrop: 'static'
+              backdrop: true
             }).show();
+          },
+          hideModal(){
+            document.querySelector('#TopModal .btn-close').click();
           },
           showAlert(params){
             this.topAlert = params;
@@ -908,7 +923,7 @@ CMD*/
             fetch(this.loadUrl)
               .then(response => response.json())
               .then(data => {
-                console.log(data); // just for debug
+                log(data); // just for debug
                 this.user = data.user;
                 this.user.energyRes = initRes(this.user.energy, data.user.energyGrowth);
 
@@ -932,7 +947,7 @@ CMD*/
             // see: bot command syncBalance
             this._makePostRequest('trackTapWork', { balance: this.user.balance, energy: this.user.energy });
           },
-          _makePostRequest(command, params, callback){
+          async _makePostRequest(command, params, callback){
             fetch(this.ApiUrls[command], {
               method: 'POST',
               headers: {
@@ -940,14 +955,25 @@ CMD*/
               },
               body: JSON.stringify(params)
             })
-            .then(response => response.json())
+            .then(response => {
+              log('Response received:', response);
+              return response.json();
+            })
             .then((data) => {
-              console.log('Command posted:', command + '. Response:', data);
+              log('Command posted:', command + '. Response:', data);
               if(data.error){
-                this.showAlert({ text: data.error, liveTime: 2500 });
+                this.showAlert({ text: data.error, class: "danger", liveTime: 2500 });
+                return;
+              }
+              if(!data.success && data.status!=200){
+                this.showAlert({ text: 'Error. Please Try later.', class: "danger", liveTime: 2500 });
+                console.warn('Error:', data);
                 return;
               }
               if(callback){ callback(data) }
+            }).catch((error) => {
+              console.error('Error:', error);
+              this.showAlert({ text: 'Error: ' + error, class: "danger", liveTime: 2500 });
             });
           }
         },
@@ -958,6 +984,58 @@ CMD*/
       });
 
       app.mount('#app');
+    </script>
+
+    <!-- Mocha Testing -->
+    <style>
+      #mocha {
+        margin: 0;
+      }
+      .modal-body ul#mocha-stats {
+        position: relative;
+        font-size: 12px;
+      }
+      .modal-body ul#mocha-stats .progress-text{
+        font-size: 12px;
+      }
+    </style>
+    <div class="modal fade" id="mochaModal" tabindex="-1" role="dialog" aria-labelledby="mochaModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="mochaModalLabel">Auto Test</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div id="startTestNotify">
+              <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                You can need to run <b>/reset</b> command in bot before tests
+              </div>
+              <h1>You can run tests now</h1>
+              You can disable this message in /start command
+            </div>
+            <div id="mocha"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" id="runTestsButton">Run Tests</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // add test script from URL
+      const queryParams = new URLSearchParams(window.location.search);
+      const testScriptUrl = queryParams.get('testScriptUrl');
+      if (testScriptUrl) {
+        const script = document.createElement('script');
+        script.src = testScriptUrl;
+        script.onerror = function() {
+          console.error(`Failed to load Test script from ${testScriptUrl}`);
+        };
+        document.head.appendChild(script);
+      }
     </script>
 
   </body>

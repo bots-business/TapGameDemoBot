@@ -1,11 +1,17 @@
 /*CMD
   command: +100$
   help: 
-  need_reply: 
+  need_reply: false
   auto_retry_time: 
   folder: Menu
-  answer: 
-  keyboard: 
+
+  <<ANSWER
+
+  ANSWER
+
+  <<KEYBOARD
+
+  KEYBOARD
   aliases: 
   group: 
 CMD*/
@@ -14,4 +20,5 @@ let gameUser = new GameUser(user);
 gameUser.addBalance(100);
 
 Bot.sendMessage("Your new balance: " + gameUser.balance);
+
 
